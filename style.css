@@ -1497,6 +1497,288 @@ body {
     animation: zoomIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
+/* ===== 小甜蜜 - 土味情话 ===== */
+.sweet-page {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.sweet-card {
+    background: white;
+    border-radius: 24px;
+    padding: 40px 30px;
+    text-align: center;
+    box-shadow: 0 8px 30px rgba(255, 105, 180, 0.15);
+    margin-bottom: 20px;
+}
+
+.sweet-quote {
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+}
+
+.sweet-icon {
+    font-size: 60px;
+    animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+@keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.sweet-quote p {
+    font-size: 20px;
+    line-height: 1.8;
+    color: var(--text-color);
+    font-weight: 500;
+    margin: 0;
+    padding: 0 10px;
+}
+
+.sweet-from {
+    font-size: 14px;
+    color: var(--text-light);
+    font-style: italic;
+}
+
+.sweet-btn {
+    margin-top: 30px;
+    padding: 14px 40px;
+    font-size: 16px;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(135deg, var(--deep-pink), var(--primary-color));
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+}
+
+.sweet-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 105, 180, 0.5);
+}
+
+.sweet-btn:active {
+    transform: translateY(0);
+}
+
+.sweet-stats {
+    text-align: center;
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+/* ===== 一起听歌 ===== */
+.music-page {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.music-player-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 24px;
+    padding: 30px;
+    text-align: center;
+    color: white;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+}
+
+.music-cover {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 50px;
+    margin: 0 auto 20px;
+    animation: spin 8s linear infinite;
+    animation-play-state: paused;
+}
+
+.music-cover.playing {
+    animation-play-state: running;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.music-info h3 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.music-info p {
+    margin: 0;
+    opacity: 0.8;
+    font-size: 14px;
+}
+
+.music-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-top: 25px;
+}
+
+.music-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.music-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.music-btn.play-btn {
+    width: 60px;
+    height: 60px;
+    font-size: 22px;
+    background: white;
+    color: #764ba2;
+}
+
+.music-btn.play-btn:hover {
+    background: white;
+    transform: scale(1.1);
+}
+
+.music-list {
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+}
+
+.music-list h4 {
+    margin: 0 0 15px 0;
+    color: var(--text-color);
+    font-size: 16px;
+}
+
+.music-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    gap: 12px;
+}
+
+.music-item:hover {
+    background: var(--bg-color);
+}
+
+.music-item.active {
+    background: linear-gradient(135deg, rgba(255, 182, 193, 0.3), rgba(255, 105, 180, 0.2));
+}
+
+.music-item-index {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--bg-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--text-light);
+    flex-shrink: 0;
+}
+
+.music-item.active .music-item-index {
+    background: var(--deep-pink);
+    color: white;
+}
+
+.music-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.music-item-title {
+    font-size: 15px;
+    color: var(--text-color);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.music-item-artist {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-top: 2px;
+}
+
+.music-tip {
+    text-align: center;
+    color: var(--text-light);
+    font-size: 13px;
+}
+
+/* 移动端适配 */
+@media (max-width: 600px) {
+    .sweet-card {
+        padding: 30px 20px;
+    }
+    
+    .sweet-quote p {
+        font-size: 18px;
+    }
+    
+    .sweet-icon {
+        font-size: 50px;
+    }
+    
+    .music-player-card {
+        padding: 25px 20px;
+    }
+    
+    .music-cover {
+        width: 100px;
+        height: 100px;
+        font-size: 40px;
+    }
+    
+    .nav-tabs {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .tab-btn {
+        flex: 0 0 auto;
+        font-size: 13px;
+        padding: 10px 12px;
+    }
+}
+
 @keyframes zoomIn {
     from {
         transform: scale(0.8);
