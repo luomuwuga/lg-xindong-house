@@ -1763,12 +1763,10 @@ function updateMyLocation() {
             let addressFull = '';
             
             if (geoResult) {
-                // 详细地址
+                // 只显示省 + 市
                 const parts = [];
                 if (geoResult.province) parts.push(geoResult.province);
                 if (geoResult.city && geoResult.city !== geoResult.province) parts.push(geoResult.city);
-                if (geoResult.district) parts.push(geoResult.district);
-                if (geoResult.street) parts.push(geoResult.street);
                 addressText = parts.join(' · ');
                 addressFull = geoResult.raw;
             } else {
