@@ -1848,26 +1848,62 @@ function updateMyLocation() {
 }
 
 // 反向地理编码：经纬度转地址
-async function reverseGeocode(lat, lng) {
-    // 优先用高德地图（国内地址更准）
-    if (AMAP_CONFIG && AMAP_CONFIG.key) {
-        try {
-            const res = await fetch(
-                `https://restapi.amap.com/v3/geocode/regeo?key=${AMAP_CONFIG.key}&location=${lng},${lat}&extensions=base&radius=1000&output=json`
-            );
-            const data = await res.json();
+// 高德地图反向地理编码（用 JSONP 方式，避免跨域）
+function reverseGeocodeAmap(lat, lng) {
+    return new Promise((resolve, reject) => {
+        if (!AMAP_CONFIG || !AMAP_CONFIG.key) {
+            reject(new Error('no amap key'));
+            return;
+        }
+        
+        const callbackName = '_amap_regeo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        
+        window[callbackName] = function(data) {
+            // 清理
+            delete window[callbackName];
+            document.body.removeChild(script);
             
             if (data.status === '1' && data.regeocode) {
                 const comp = data.regeocode.addressComponent || {};
-                return {
+                resolve({
                     full: data.regeocode.formatted_address || '',
                     province: comp.province || '',
                     city: comp.city || comp.province || '',
                     district: comp.district || '',
                     street: comp.township || comp.street || '',
                     raw: data.regeocode.formatted_address || ''
-                };
+                });
+            } else {
+                reject(new Error(data.info || 'amap error'));
             }
+        };
+        
+        const script = document.createElement('script');
+        script.src = `https://restapi.amap.com/v3/geocode/regeo?key=${AMAP_CONFIG.key}&location=${lng},${lat}&extensions=base&radius=1000&output=json&callback=${callbackName}`;
+        script.onerror = function() {
+            delete window[callbackName];
+            document.body.removeChild(script);
+            reject(new Error('amap network error'));
+        };
+        document.body.appendChild(script);
+        
+        // 超时 8 秒
+        setTimeout(() => {
+            if (window[callbackName]) {
+                delete window[callbackName];
+                try { document.body.removeChild(script); } catch(e) {}
+                reject(new Error('amap timeout'));
+            }
+        }, 8000);
+    });
+}
+
+async function reverseGeocode(lat, lng) {
+    // 优先用高德地图（国内地址更准），用 JSONP 避免跨域
+    if (AMAP_CONFIG && AMAP_CONFIG.key) {
+        try {
+            const result = await reverseGeocodeAmap(lat, lng);
+            return result;
         } catch (e) {
             console.warn('高德地理编码失败，回退到OSM:', e);
         }
