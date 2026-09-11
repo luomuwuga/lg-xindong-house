@@ -1,5 +1,118 @@
 // LG心动小屋 - 主逻辑
 
+// ===== Gist 云端同步配置 =====
+// GitHub Gist 作为云端数据库，实现两人数据同步
+const GIST_CONFIG = {
+    // Gist ID（创建后填入）
+    gistId: '84d3ebbe582873205054e76185f9ee6c',
+    // GitHub Token（简单加密，运行时解码）
+    _tokenEnc: 'MFRsdzAwZnZUendUY3JyRXpCTFp2OU91WkZIWHBqU1UycnI5X3BoZw==',
+    // 数据文件名
+    fileName: 'lg-xindong-data.json',
+    // 自动刷新间隔（毫秒）
+    refreshInterval: 8000
+};
+
+// 解码 token
+function _getGistToken() {
+    try {
+        return atob(GIST_CONFIG._tokenEnc).split('').reverse().join('');
+    } catch (e) {
+        return '';
+    }
+}
+
+// Gist 模式开关
+let GIST_MODE = false;
+let gistData = null;
+let _savingGist = false; // 防止重复保存
+
+// 从 Gist 读取数据
+async function fetchGistData() {
+    try {
+        const res = await fetch(`https://api.github.com/gists/${GIST_CONFIG.gistId}`, {
+            headers: {
+                'Authorization': `token ${_getGistToken()}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+        
+        if (!res.ok) throw new Error('Failed to fetch gist');
+        
+        const data = await res.json();
+        const fileContent = data.files[GIST_CONFIG.fileName].content;
+        gistData = JSON.parse(fileContent);
+        
+        // 更新配置
+        if (gistData.users) {
+            CONFIG.users.girl1.name = gistData.users.girl1.name;
+            CONFIG.users.girl1.avatar = gistData.users.girl1.avatar;
+            CONFIG.users.girl2.name = gistData.users.girl2.name;
+            CONFIG.users.girl2.avatar = gistData.users.girl2.avatar;
+            CONFIG.users.girl1.password = gistData.password;
+            CONFIG.users.girl2.password = gistData.password;
+        }
+        if (gistData.meetDate) {
+            CONFIG.meetDate = gistData.meetDate;
+        }
+        
+        // 更新数据
+        messages = gistData.messages || [];
+        anniversaries = gistData.anniversaries || [];
+        wishes = gistData.wishes || [];
+        moods = gistData.moods || {};
+        photos = gistData.photos || [];
+        locations = gistData.locations || {};
+        
+        return true;
+    } catch (e) {
+        console.error('Gist 读取失败:', e);
+        return false;
+    }
+}
+
+// 保存数据到 Gist
+async function saveGistData() {
+    try {
+        const dataToSave = {
+            users: {
+                girl1: { name: CONFIG.users.girl1.name, avatar: CONFIG.users.girl1.avatar },
+                girl2: { name: CONFIG.users.girl2.name, avatar: CONFIG.users.girl2.avatar }
+            },
+            password: CONFIG.users.girl1.password,
+            meetDate: CONFIG.meetDate,
+            messages: messages,
+            anniversaries: anniversaries,
+            wishes: wishes,
+            moods: moods,
+            photos: photos,
+            locations: locations
+        };
+        
+        const res = await fetch(`https://api.github.com/gists/${GIST_CONFIG.gistId}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `token ${_getGistToken()}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                files: {
+                    [GIST_CONFIG.fileName]: {
+                        content: JSON.stringify(dataToSave, null, 2)
+                    }
+                }
+            })
+        });
+        
+        if (!res.ok) throw new Error('Failed to update gist');
+        return true;
+    } catch (e) {
+        console.error('Gist 保存失败:', e);
+        return false;
+    }
+}
+
 // ===== API 配置 =====
 // 如果后端部署在其他地方，改成对应的地址
 const API_BASE = window.location.hostname === 'localhost' 
@@ -9,18 +122,34 @@ const API_BASE = window.location.hostname === 'localhost'
 // 服务器模式开关：true = 从服务器同步数据，false = 本地存储模式
 let SERVER_MODE = true;
 
-// 自动检测是否有后端服务器
+// 自动检测使用哪种模式
 async function checkServerMode() {
+    // 先尝试本地服务器
     try {
         const res = await fetch(`${API_BASE}/health`);
         if (res.ok) {
             SERVER_MODE = true;
-            console.log('💕 已连接到后端服务器，数据实时同步~');
+            GIST_MODE = false;
+            console.log('💕 已连接到本地后端服务器，数据实时同步~');
+            return;
         }
     } catch (e) {
-        SERVER_MODE = false;
-        console.log('💡 未检测到后端服务器，使用本地存储模式');
+        // 本地服务器不可用，尝试 Gist 模式
     }
+    
+    // 尝试 Gist 模式
+    const gistOk = await fetchGistData();
+    if (gistOk) {
+        GIST_MODE = true;
+        SERVER_MODE = false;
+        console.log('☁️  已连接到 Gist 云端数据库，数据实时同步~');
+        return;
+    }
+    
+    // 都不行，用本地存储
+    SERVER_MODE = false;
+    GIST_MODE = false;
+    console.log('💡 未检测到服务器，使用本地存储模式');
 }
 
 // ===== 配置 =====
@@ -86,9 +215,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     checkLogin();
     bindEvents();
     
-    // 服务器模式下，定期刷新数据（每10秒）
-    if (SERVER_MODE) {
-        setInterval(refreshAllData, 10000);
+    // 服务器模式下，定期刷新数据
+    if (SERVER_MODE || GIST_MODE) {
+        setInterval(refreshAllData, GIST_MODE ? GIST_CONFIG.refreshInterval : 10000);
     }
 });
 
@@ -177,12 +306,16 @@ async function fetchAllData() {
 
 // 刷新所有数据（已登录时）
 async function refreshAllData() {
-    if (!SERVER_MODE || !currentUser) return;
+    if ((!SERVER_MODE && !GIST_MODE) || !currentUser) return;
     
     const hadData = messages.length > 0;
     const prevCount = messages.length;
     
-    await fetchAllData();
+    if (GIST_MODE) {
+        await fetchGistData();
+    } else {
+        await fetchAllData();
+    }
     
     // 重新渲染
     if (document.getElementById('home-tab').classList.contains('active')) {
@@ -487,6 +620,16 @@ function handleLogin(e) {
         .catch(() => {
             errorEl.textContent = '连接服务器失败~';
         });
+    } else if (GIST_MODE) {
+        // Gist 模式
+        const user = CONFIG.users[userId];
+        if (user && user.password === password) {
+            login(userId);
+            errorEl.textContent = '';
+        } else {
+            errorEl.textContent = '秘密暗号不对哦~ 再想想？';
+            shakeElement(document.querySelector('.login-container'));
+        }
     } else {
         // 本地模式
         const user = CONFIG.users[userId];
@@ -517,6 +660,9 @@ async function login(userId) {
     if (SERVER_MODE) {
         // 服务器模式：从服务器加载所有数据
         await fetchAllData();
+    } else if (GIST_MODE) {
+        // Gist 模式：数据已经在 checkServerMode 时加载了
+        await fetchGistData();
     }
     
     // 加载数据
@@ -781,6 +927,28 @@ function sendMessage() {
         .catch(() => {
             showToast('发送失败，检查网络~');
         });
+    } else if (GIST_MODE) {
+        // Gist 模式
+        const newMsg = {
+            id: Date.now(),
+            userId: currentUser,
+            content: content,
+            time: new Date().toISOString()
+        };
+        messages.push(newMsg);
+        saveGistData().then(ok => {
+            if (ok) {
+                input.value = '';
+                updateCharCount();
+                renderMessages();
+                updateMessageCount();
+                renderLatestMessage();
+                showToast('留言已送达~ 💌');
+            } else {
+                messages.pop();
+                showToast('发送失败了~');
+            }
+        });
     } else {
         // 本地模式
         const newMsg = {
@@ -817,6 +985,20 @@ function deleteMessage(id) {
             });
             showToast('已删除');
         });
+    } else if (GIST_MODE) {
+        const oldMessages = [...messages];
+        messages = messages.filter(m => m.id !== id);
+        saveGistData().then(ok => {
+            if (ok) {
+                renderMessages();
+                updateMessageCount();
+                renderLatestMessage();
+                showToast('已删除');
+            } else {
+                messages = oldMessages;
+                showToast('删除失败了~');
+            }
+        });
     } else {
         messages = messages.filter(m => m.id !== id);
         saveMessages();
@@ -833,6 +1015,10 @@ function updateMessageCount() {
 
 function saveMessages() {
     localStorage.setItem('bff_messages', JSON.stringify(messages));
+    if (GIST_MODE && !_savingGist) {
+        _savingGist = true;
+        saveGistData().finally(() => { _savingGist = false; });
+    }
 }
 
 // ===== 纪念日 =====
@@ -982,6 +1168,10 @@ function updateAnniversaryCount() {
 
 function saveAnniversaries() {
     localStorage.setItem('bff_anniversaries', JSON.stringify(anniversaries));
+    if (GIST_MODE && !_savingGist) {
+        _savingGist = true;
+        saveGistData().finally(() => { _savingGist = false; });
+    }
 }
 
 // ===== 心愿清单 =====
@@ -1152,6 +1342,10 @@ function updateWishCount() {
 
 function saveWishes() {
     localStorage.setItem('bff_wishes', JSON.stringify(wishes));
+    if (GIST_MODE && !_savingGist) {
+        _savingGist = true;
+        saveGistData().finally(() => { _savingGist = false; });
+    }
 }
 
 // ===== 心情打卡 =====
@@ -1295,6 +1489,10 @@ function updateMoodCount() {
 
 function saveMoods() {
     localStorage.setItem('bff_moods', JSON.stringify(moods));
+    if (GIST_MODE && !_savingGist) {
+        _savingGist = true;
+        saveGistData().finally(() => { _savingGist = false; });
+    }
 }
 
 // ===== 相册 - 神图诞生 =====
@@ -1528,6 +1726,10 @@ function savePhotos() {
     } catch (e) {
         showToast('存储空间不够啦，删掉一些旧照片吧~');
     }
+    if (GIST_MODE && !_savingGist) {
+        _savingGist = true;
+        saveGistData().finally(() => { _savingGist = false; });
+    }
 }
 
 // ===== 地理位置 =====
@@ -1751,6 +1953,10 @@ function formatLocationTime(timeStr) {
 
 function saveLocations() {
     localStorage.setItem('bff_locations', JSON.stringify(locations));
+    if (GIST_MODE && !_savingGist) {
+        _savingGist = true;
+        saveGistData().finally(() => { _savingGist = false; });
+    }
 }
 
 // ===== 工具函数 =====
