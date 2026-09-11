@@ -1984,13 +1984,14 @@ function generateAddressDesc(lat, lng) {
     return `${latDir}${latAbs}°，${lngDir}${lngAbs}°\n${region}`;
 }
 
-// 自动补全位置的地址信息（如果有经纬度但没有地址）
+// 自动补全位置的地址信息（如果有经纬度但没有真实地址）
 async function ensureLocationAddresses() {
     let needsSave = false;
     
     for (const key of ['girl1', 'girl2']) {
         const loc = locations[key];
-        if (loc && loc.lat && loc.lng && !loc.address) {
+        // 如果有经纬度，且没有地址或地址是旧的经纬度格式（含"北纬""东经"），就重新解析
+        if (loc && loc.lat && loc.lng && (!loc.address || loc.address.includes('北纬') || loc.address.includes('东经'))) {
             const geoResult = await reverseGeocode(loc.lat, loc.lng);
             if (geoResult) {
                 const parts = [];
@@ -2044,7 +2045,8 @@ function renderLocationCards() {
     // 位置1
     if (loc1) {
         const addrParts = [];
-        if (loc1.address) {
+        // 如果有真实地址（不含"北纬""东经"），就显示真实地址
+        if (loc1.address && !loc1.address.includes('北纬') && !loc1.address.includes('东经')) {
             addrParts.push(`📍 ${loc1.address}`);
         } else {
             addrParts.push(generateAddressDesc(loc1.lat, loc1.lng).replace(/\n/g, '<br>'));
@@ -2067,7 +2069,7 @@ function renderLocationCards() {
     // 位置2
     if (loc2) {
         const addrParts = [];
-        if (loc2.address) {
+        if (loc2.address && !loc2.address.includes('北纬') && !loc2.address.includes('东经')) {
             addrParts.push(`📍 ${loc2.address}`);
         } else {
             addrParts.push(generateAddressDesc(loc2.lat, loc2.lng).replace(/\n/g, '<br>'));
