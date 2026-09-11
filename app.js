@@ -746,6 +746,16 @@ function switchTab(tabName) {
     if (tabName === 'location') {
         ensureLocationAddresses();
     }
+    
+    // 切换到小甜蜜页时，初始化
+    if (tabName === 'sweet') {
+        initSweetPage();
+    }
+    
+    // 切换到听歌页时，初始化
+    if (tabName === 'music') {
+        initMusicPage();
+    }
 }
 
 // ===== 首页数据 =====
@@ -2168,6 +2178,198 @@ function saveLocations() {
         _savingGist = true;
         saveGistData().finally(() => { _savingGist = false; });
     }
+}
+
+// ===== 土味情话 =====
+const SWEET_QUOTES = [
+    "你是我最想珍藏的宝贝，也是我最想分享所有快乐和难过的人 💕",
+    "别人都祝你快乐，我只愿你，遍历山河，觉得人间值得 ✨",
+    "你不用跟别人比，你在我这里永远是最好的 🌸",
+    "虽然你不是超人，但你是我的万能闺蜜 🦸‍♀️",
+    "认识你这么久，从来没后悔过，反而觉得特别幸运 🍀",
+    "你开心的时候我比你还开心，你难过的时候我想当你的依靠 🫂",
+    "我们不是限定，是来日方长 🌅",
+    "别人是见色起意，我们是见你起意 😂💕",
+    "愿我们的友谊，从校服到婚纱，从青丝到白发 👰‍♀️👰‍♀️",
+    "你是我选中的家人，没有血缘关系的亲人 👭",
+    "跟你在一起的时候，我从来不用羡慕别人 💖",
+    "谢谢你陪我长大，陪我犯傻，陪我度过所有好与不好的时光 🎀",
+    "世界那么大，能遇见你，是我最大的幸运 🌟",
+    "你就是我的宝藏女孩，藏起来不想跟别人分享的那种 🎁",
+    "我们的关系就是：见面互怼，不见面想念，永远不会散 💫",
+    "你是我枯燥生活里的糖，有你在生活都变甜了 🍬",
+    "闺蜜就是那个，陪你从非主流到女神的人 👑",
+    "我会在每个有意义的时刻，远隔山海与你共存 🌊",
+    "你不用多好，我喜欢就好；我没有很好，你不嫌弃就好 🥰",
+    "我们的友谊，不会输给时间，不会输给距离，更不会输给别人 🏆",
+    "你笑起来真好看，像春天的花一样~ 🌺",
+    "这辈子最不后悔的事，就是认识了你 💕",
+    "你是我亲自挑选的家人，所以请你，不要离开我 🥺💕",
+    "我们要做一辈子的好朋友，老了一起跳广场舞 💃",
+    "有你在身边，风都超级甜 🍃💕",
+    "你是我永远的底气，也是我永远的退路 🌈",
+    "别人问我你哪里好，我说，哪都好，就是谁也替代不了 💗",
+    "我们的故事，还很长，慢慢讲 ～ 📖",
+    "有一个懂你的闺蜜，真的太幸福了 💕",
+    "你永远是我，最最最最最重要的人！🌟"
+];
+
+let currentSweetIndex = -1;
+
+function nextSweetQuote() {
+    const textEl = document.getElementById('sweet-text');
+    const quoteEl = document.getElementById('sweet-quote');
+    
+    // 随机选一个，不要和上一个一样
+    let newIndex;
+    do {
+        newIndex = Math.floor(Math.random() * SWEET_QUOTES.length);
+    } while (newIndex === currentSweetIndex && SWEET_QUOTES.length > 1);
+    
+    currentSweetIndex = newIndex;
+    
+    // 添加一个小动画
+    quoteEl.style.opacity = '0';
+    quoteEl.style.transform = 'translateY(10px)';
+    
+    setTimeout(() => {
+        textEl.textContent = SWEET_QUOTES[newIndex];
+        quoteEl.style.opacity = '1';
+        quoteEl.style.transform = 'translateY(0)';
+    }, 200);
+}
+
+// 初始化时先显示一句
+function initSweetPage() {
+    if (currentSweetIndex === -1) {
+        nextSweetQuote();
+    }
+}
+
+// ===== 一起听歌 =====
+const DEFAULT_SONGS = [
+    { title: '一个像夏天一个像秋天', artist: '范玮琪', url: '', emoji: '🎵' },
+    { title: '姐妹', artist: '张惠妹', url: '', emoji: '🎶' },
+    { title: '闺蜜', artist: '许嵩/何曼婷', url: '', emoji: '💕' },
+    { title: '世界上的另一个我', artist: '阿肆/郭采洁', url: '', emoji: '👯' },
+    { title: '陪你长大', artist: '大Q秉洛', url: '', emoji: '🌱' },
+];
+
+let songList = [...DEFAULT_SONGS];
+let currentSongIndex = -1;
+let isPlaying = false;
+
+function renderMusicList() {
+    const container = document.getElementById('music-list-container');
+    container.innerHTML = songList.map((song, index) => `
+        <div class="music-item ${index === currentSongIndex ? 'active' : ''}" onclick="playSong(${index})">
+            <div class="music-item-index">${index + 1}</div>
+            <div class="music-item-info">
+                <div class="music-item-title">${song.title}</div>
+                <div class="music-item-artist">${song.artist}</div>
+            </div>
+            <div style="font-size: 20px;">${song.emoji || '🎵'}</div>
+        </div>
+    `).join('');
+}
+
+function playSong(index) {
+    if (index < 0 || index >= songList.length) return;
+    
+    currentSongIndex = index;
+    const song = songList[index];
+    
+    document.getElementById('music-title').textContent = song.title;
+    document.getElementById('music-artist').textContent = song.artist;
+    document.getElementById('music-cover').textContent = song.emoji || '🎶';
+    
+    const audio = document.getElementById('audio-player');
+    
+    if (song.url) {
+        audio.src = song.url;
+        audio.play().catch(() => {
+            // 自动播放被阻止，等用户点击
+        });
+        isPlaying = true;
+        updatePlayButton();
+    } else {
+        // 没有音频链接，模拟播放
+        isPlaying = !isPlaying;
+        if (isPlaying) {
+            showToast('🎵 假装在播放~ 想加真实歌曲的话，把音频链接告诉我哦！');
+        }
+        updatePlayButton();
+    }
+    
+    renderMusicList();
+}
+
+function togglePlay() {
+    if (currentSongIndex === -1) {
+        playSong(0);
+        return;
+    }
+    
+    const audio = document.getElementById('audio-player');
+    const song = songList[currentSongIndex];
+    
+    if (song.url) {
+        if (isPlaying) {
+            audio.pause();
+        } else {
+            audio.play().catch(() => {});
+        }
+        isPlaying = !isPlaying;
+    } else {
+        isPlaying = !isPlaying;
+    }
+    
+    updatePlayButton();
+}
+
+function updatePlayButton() {
+    const btn = document.getElementById('play-btn');
+    const cover = document.getElementById('music-cover');
+    
+    if (isPlaying) {
+        btn.textContent = '⏸';
+        cover.classList.add('playing');
+    } else {
+        btn.textContent = '▶️';
+        cover.classList.remove('playing');
+    }
+}
+
+function prevMusic() {
+    if (currentSongIndex <= 0) {
+        playSong(songList.length - 1);
+    } else {
+        playSong(currentSongIndex - 1);
+    }
+}
+
+function nextMusic() {
+    if (currentSongIndex >= songList.length - 1) {
+        playSong(0);
+    } else {
+        playSong(currentSongIndex + 1);
+    }
+}
+
+function initMusicPage() {
+    renderMusicList();
+    const audio = document.getElementById('audio-player');
+    audio.addEventListener('ended', () => {
+        nextMusic();
+    });
+    audio.addEventListener('play', () => {
+        isPlaying = true;
+        updatePlayButton();
+    });
+    audio.addEventListener('pause', () => {
+        isPlaying = false;
+        updatePlayButton();
+    });
 }
 
 // ===== 工具函数 =====
