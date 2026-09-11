@@ -385,17 +385,22 @@ function checkLogin() {
 // ===== 事件绑定 =====
 function bindEvents() {
     // 登录表单
-    document.getElementById('login-form').addEventListener('submit', handleLogin);
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) loginForm.addEventListener('submit', handleLogin);
     
-    // 注册表单
-    document.getElementById('register-form').addEventListener('submit', handleRegister);
+    // 注册表单（如果存在才绑定）
+    const registerForm = document.getElementById('register-form');
+    if (registerForm) registerForm.addEventListener('submit', handleRegister);
     
     // 页面切换
-    document.getElementById('go-register').addEventListener('click', showRegisterPage);
-    document.getElementById('go-login').addEventListener('click', showLoginPage);
+    const goRegister = document.getElementById('go-register');
+    if (goRegister) goRegister.addEventListener('click', showRegisterPage);
+    const goLogin = document.getElementById('go-login');
+    if (goLogin) goLogin.addEventListener('click', showLoginPage);
     
     // 退出登录
-    document.getElementById('logout-btn').addEventListener('click', handleLogout);
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
     
     // 标签切换
     document.querySelectorAll('.tab-btn').forEach(btn => {
