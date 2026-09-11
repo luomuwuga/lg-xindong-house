@@ -1751,17 +1751,44 @@ function updateMyLocation() {
     }
     
     navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
             
-            const address = generateAddressDesc(lat, lng);
+            btn.textContent = '🔍 解析地址中...';
+            
+            // 反向地理编码获取详细地址
+            const geoResult = await reverseGeocode(lat, lng);
+            let addressText = '';
+            let addressFull = '';
+            
+            if (geoResult) {
+                // 详细地址
+                const parts = [];
+                if (geoResult.province) parts.push(geoResult.province);
+                if (geoResult.city && geoResult.city !== geoResult.province) parts.push(geoResult.city);
+                if (geoResult.district) parts.push(geoResult.district);
+                if (geoResult.street) parts.push(geoResult.street);
+                addressText = parts.join(' · ');
+                addressFull = geoResult.raw;
+            } else {
+                addressText = generateAddressDesc(lat, lng);
+            }
+            
+            // 保存位置数据（包含详细地址）
+            const locationData = {
+                lat: lat,
+                lng: lng,
+                address: addressText,
+                addressFull: addressFull,
+                time: new Date().toISOString()
+            };
             
             if (SERVER_MODE) {
                 fetch(`${API_BASE}/locations`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: currentUser, lat, lng, address })
+                    body: JSON.stringify({ userId: currentUser, lat, lng, address: addressText, addressFull })
                 })
                 .then(res => res.json())
                 .then(data => {
@@ -1776,13 +1803,7 @@ function updateMyLocation() {
                     }
                 });
             } else {
-                locations[currentUser] = {
-                    lat: lat,
-                    lng: lng,
-                    address: address,
-                    time: new Date().toISOString()
-                };
-                
+                locations[currentUser] = locationData;
                 saveLocations();
                 renderLocationCards();
                 updateDistance();
@@ -1810,6 +1831,59 @@ function updateMyLocation() {
             maximumAge: 0
         }
     );
+}
+
+// 反向地理编码：经纬度转地址
+async function reverseGeocode(lat, lng) {
+    try {
+        // 使用 OpenStreetMap Nominatim 免费 API
+        const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=14&accept-language=zh-CN&addressdetails=1`,
+            {
+                headers: {
+                    'User-Agent': 'LG-Xindong-House/1.0'
+                }
+            }
+        );
+        
+        if (!res.ok) throw new Error('Geocoding failed');
+        
+        const data = await res.json();
+        const addr = data.address || {};
+        
+        // 拼接地址信息
+        let parts = [];
+        
+        // 省/州
+        if (addr.province || addr.state) parts.push(addr.province || addr.state);
+        // 城市
+        if (addr.city || addr.town || addr.county) parts.push(addr.city || addr.town || addr.county);
+        // 区/县
+        if (addr.borough || addr.suburb || addr.city_district) {
+            parts.push(addr.borough || addr.suburb || addr.city_district);
+        }
+        // 街道/乡镇
+        if (addr.road || addr.street) parts.push(addr.road || addr.street);
+        if (addr.village || addr.neighbourhood) parts.push(addr.village || addr.neighbourhood);
+        
+        // 如果啥都没取到，用 display_name 的前几段
+        if (parts.length === 0 && data.display_name) {
+            const displayParts = data.display_name.split(',');
+            parts = displayParts.slice(0, 3).map(s => s.trim());
+        }
+        
+        return {
+            full: parts.join(' '),
+            province: addr.province || addr.state || '',
+            city: addr.city || addr.town || addr.county || '',
+            district: addr.borough || addr.suburb || addr.city_district || '',
+            street: addr.road || addr.street || '',
+            raw: data.display_name || ''
+        };
+    } catch (e) {
+        console.error('地理编码失败:', e);
+        return null;
+    }
 }
 
 function generateAddressDesc(lat, lng) {
@@ -1850,8 +1924,16 @@ function renderLocationCards() {
     
     // 位置1
     if (loc1) {
-        document.getElementById('loc-address-1').innerHTML = 
-            loc1.address.replace(/\n/g, '<br>');
+        const addrParts = [];
+        if (loc1.address) {
+            addrParts.push(`📍 ${loc1.address}`);
+        } else {
+            addrParts.push(generateAddressDesc(loc1.lat, loc1.lng).replace(/\n/g, '<br>'));
+        }
+        if (loc1.lat && loc1.lng) {
+            addrParts.push(`<small style="opacity:0.6">坐标: ${loc1.lat.toFixed(4)}°, ${loc1.lng.toFixed(4)}°</small>`);
+        }
+        document.getElementById('loc-address-1').innerHTML = addrParts.join('<br>');
         document.getElementById('loc-time-1').textContent = 
             `更新于 ${formatLocationTime(loc1.time)}`;
         document.getElementById('loc-status-1').textContent = '📍';
@@ -1865,8 +1947,16 @@ function renderLocationCards() {
     
     // 位置2
     if (loc2) {
-        document.getElementById('loc-address-2').innerHTML = 
-            loc2.address.replace(/\n/g, '<br>');
+        const addrParts = [];
+        if (loc2.address) {
+            addrParts.push(`📍 ${loc2.address}`);
+        } else {
+            addrParts.push(generateAddressDesc(loc2.lat, loc2.lng).replace(/\n/g, '<br>'));
+        }
+        if (loc2.lat && loc2.lng) {
+            addrParts.push(`<small style="opacity:0.6">坐标: ${loc2.lat.toFixed(4)}°, ${loc2.lng.toFixed(4)}°</small>`);
+        }
+        document.getElementById('loc-address-2').innerHTML = addrParts.join('<br>');
         document.getElementById('loc-time-2').textContent = 
             `更新于 ${formatLocationTime(loc2.time)}`;
         document.getElementById('loc-status-2').textContent = '📍';
