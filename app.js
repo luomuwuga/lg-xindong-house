@@ -16,7 +16,7 @@ const GIST_CONFIG = {
 // ===== 高德地图配置 =====
 // 高德地图 Web 服务 Key，用于反向地理编码（经纬度转地址）
 const AMAP_CONFIG = {
-    key: 'f6e69a43ced60e26c3fda62998e4ffd2'
+    key: '5e39a9184e49154b331b8fe03d631a30'
 };
 
 // 解码 token
