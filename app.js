@@ -219,6 +219,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (SERVER_MODE || GIST_MODE) {
         setInterval(refreshAllData, GIST_MODE ? GIST_CONFIG.refreshInterval : 10000);
     }
+    
+    // 后台静默补全位置地址（如果有的话）
+    setTimeout(() => {
+        if (currentUser) ensureLocationAddresses();
+    }, 3000);
 });
 
 // 加载配置（如果有自定义配置）
@@ -729,6 +734,11 @@ function switchTab(tabName) {
     if (tabName === 'photos') {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('photo-date').value = today;
+    }
+    
+    // 切换到位置页时，自动补全缺失的地址信息
+    if (tabName === 'location') {
+        ensureLocationAddresses();
     }
 }
 
@@ -1906,6 +1916,51 @@ function generateAddressDesc(lat, lng) {
     }
     
     return `${latDir}${latAbs}°，${lngDir}${lngAbs}°\n${region}`;
+}
+
+// 自动补全位置的地址信息（如果有经纬度但没有地址）
+async function ensureLocationAddresses() {
+    let needsSave = false;
+    
+    for (const key of ['girl1', 'girl2']) {
+        const loc = locations[key];
+        if (loc && loc.lat && loc.lng && !loc.address) {
+            const geoResult = await reverseGeocode(loc.lat, loc.lng);
+            if (geoResult) {
+                const parts = [];
+                if (geoResult.province) parts.push(geoResult.province);
+                if (geoResult.city && geoResult.city !== geoResult.province) parts.push(geoResult.city);
+                loc.address = parts.join(' · ');
+                loc.addressFull = geoResult.raw;
+                needsSave = true;
+            }
+        }
+    }
+    
+    if (needsSave) {
+        if (SERVER_MODE) {
+            // 分别更新两个人的位置地址
+            for (const key of ['girl1', 'girl2']) {
+                const loc = locations[key];
+                if (loc && loc.address) {
+                    fetch(`${API_BASE}/locations`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            userId: key, 
+                            lat: loc.lat, 
+                            lng: loc.lng, 
+                            address: loc.address, 
+                            addressFull: loc.addressFull 
+                        })
+                    }).catch(() => {});
+                }
+            }
+        } else {
+            saveLocations();
+        }
+        renderLocationCards();
+    }
 }
 
 function renderLocationCards() {
